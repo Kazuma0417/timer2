@@ -158,7 +158,7 @@
         }
 
         .progress-ring {
-            transform: rotate(-90deg);
+            transform: rotate(-90deg) scaleX(-1);
         }
 
         .progress-ring__circle-bg {
@@ -503,7 +503,6 @@
                 target.setSeconds(0);
                 
                 if (target <= now) {
-                    // 翌日に設定
                     target.setDate(target.getDate() + 1);
                 }
                 targetEndTime = target;
@@ -524,7 +523,6 @@
             const now = new Date();
             now.setMinutes(now.getMinutes() + mins);
             targetHourSelect.value = now.getHours();
-            // 最寄りの5分刻みに丸める
             let m = Math.round(now.getMinutes() / 5) * 5;
             if (m >= 60) {
                 m = 0;
@@ -543,7 +541,6 @@
             updateInitialDisplay();
         };
 
-        // 入力変更時のイベントリスナー
         [durHoursSelect, durMinsSelect, targetHourSelect, targetMinuteSelect].forEach(el => {
             el.addEventListener('change', updateInitialDisplay);
         });
@@ -589,7 +586,6 @@
             remainingSeconds = totalSeconds;
             isRunning = true;
 
-            // UI切替
             document.getElementById('mainContainer').classList.remove('finished');
             document.querySelectorAll('select, .tab, .preset-btn').forEach(el => el.disabled = true);
             const startBtn = document.getElementById('startBtn');
@@ -663,7 +659,6 @@
             updateInitialDisplay();
         };
 
-        // 初期表示のセット
         updateInitialDisplay();
     </script>
 </body>
