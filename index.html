@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>丸形無音タイマー</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Custom smooth transition for SVG progress */
+        .progress-ring__circle {
+            transition: stroke-dashoffset 0.5s ease-in-out;
+        }
+        /* Pulse animation for completion */
+        @keyframes silent-pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.03); opacity: 0.85; }
+        }
+        .animate-silent-pulse {
+            animation: silent-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes flash-bg {
+            0%, 100% { background-color: #0f172a; }
+            50% { background-color: #451a03; }
+        }
+        .timer-finished {
+            animation: flash-bg 1.5s infinite;
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col justify-between items-center p-4 sm:p-6 transition-colors duration-500" id="body-container">
+
+    <header class="w-full max-w-md flex justify-between items-center py-2">
+        <div class="flex items-center space-x-2">
+            <div class="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></div>
+            <h1 class="text-lg font-semibold tracking-wide">Silent Timer</h1>
+        </div>
+        <button id="theme-toggle" class="p-2 rounded-full bg-slate-900 border border-slate-800 hover:bg-slate-800 transition text-sm flex items-center space-x-1 text-slate-300">
+            <span id="theme-icon">🌙</span>
+        </button>
+    </header>
+
+    <main class="w-full max-w-md flex flex-col items-center my-auto space-y-8">
+        
+        <!-- Status Notification Box (replaces alert) -->
+        <div id="notification-box" class="hidden w-full bg-rose-950/80 border border-rose-800 text-rose-200 px-4 py-3 rounded-2xl text-center text-sm font-medium transition-all duration-300 shadow-lg">
+            ✨ 時間になりました（無音モード）
+        </div>
+
+        <!-- Circular Timer Component -->
+        <div class="relative flex items-center justify-center p-4">
+            <!-- SVG Progress Ring -->
+            <svg class="w-72 h-72 sm:w-80 sm:h-80 transform -rotate-90" viewBox="0 0 280 280">
+                <!-- Background track ring -->
+                <circle cx="140" cy="140" r="120" stroke="currentColor" stroke-width="12" class="text-slate-900 fill-transparent" />
+                <!-- Active countdown ring -->
+                <circle id="progress-ring" cx="140" cy="140" r="120" stroke="currentColor" stroke-width="12" 
+                    class="text-indigo-500 fill-transparent progress-ring__circle"
+                    stroke-dasharray="753.98"
+                    stroke-dashoffset="0"
+                    stroke-linecap="round" />
+            </svg>
+
+            <!-- Inner Timer Display Content -->
+            <div class="absolute flex flex-col items-center justify-center text-center">
+                <span id="time-display" class="text-5xl sm:text-6xl font-extrabold tracking-tight tabular-nums font-mono drop-shadow-md">05:00</span>
+                <span id="status-label" class="text-xs uppercase tracking-widest text-slate-400 mt-2 font-medium">Ready</span>
+            </div>
+        </div>
+
+        <div class="w-full grid grid-cols-4 gap-2 px-2">
+            <button onclick="setTimer(1)" class="preset-btn py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800/80 text-xs font-semibold text-slate-300 transition active:scale-95 shadow-sm">1分</button>
+            <button onclick="setTimer(3)" class="preset-btn py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800/80 text-xs font-semibold text-slate-300 transition active:scale-95 shadow-sm">3分</button>
+            <button onclick="setTimer(5)" class="preset-btn py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800/80 text-xs font-semibold text-slate-300 transition active:scale-95 shadow-sm">5分</button>
+            <button onclick="setTimer(10)" class="preset-btn py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800/80 text-xs font-semibold text-slate-300 transition active:scale-95 shadow-sm">10分</button>
+            <button onclick="setTimer(15)" class="preset-btn py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800/80 text-xs font-semibold text-slate-300 transition active:scale-95 shadow-sm">15分</button>
+            <button onclick="setTimer(25)" class="preset-btn py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800/80 text-xs font-semibold text-slate-300 transition active:scale-95 shadow-sm">25分</button>
+            <button onclick="setTimer(30)" class="preset-btn py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800/80 text-xs font-semibold text-slate-300 transition active:scale-95 shadow-sm">30分</button>
+            <button onclick="openCustomModal()" class="preset-btn py-2.5 rounded-xl bg-indigo-950/60 hover:bg-indigo-900/60 border border-indigo-800/50 text-xs font-semibold text-indigo-300 transition active:scale-95 shadow-sm">カスタム</button>
+        </div>
+
+        <div class="w-full flex space-x-3 px-2 pt-2">
+            <button id="start-pause-btn" onclick="toggleTimer()" class="flex-1 py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm tracking-wide shadow-lg shadow-indigo-600/30 transition active:scale-98 flex items-center justify-center space-x-2">
+                <span id="start-icon">▶</span>
+                <span id="start-text">スタート</span>
+            </button>
+            <button onclick="resetTimer()" class="px-6 py-3.5 rounded-2xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 font-semibold text-sm transition active:scale-98 shadow-sm">
+                リセット
+            </button>
+        </div>
+
+        <!-- Custom Time Input Drawer/Modal (Hidden by default) -->
+        <div id="custom-modal" class="hidden w-full bg-slate-900/90 border border-slate-800 p-4 rounded-2xl space-y-3">
+            <div class="flex justify-between items-center text-xs font-medium text-slate-400">
+                <span>カスタム時間設定</span>
+                <button onclick="closeCustomModal()" class="hover:text-white">✕</button>
+            </div>
+            <div class="flex space-x-2 items-center">
+                <input type="number" id="custom-min" min="0" max="180" value="5" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-center text-lg font-mono focus:outline-none focus:border-indigo-500">
+                <span class="text-sm text-slate-400">分</span>
+                <button onclick="applyCustomTime()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-xs font-semibold text-white transition">設定</button>
+            </div>
+        </div>
+
+    </main>
+
+    <footer class="w-full max-w-md text-center text-xs text-slate-500 py-4">
+        完全無音・視覚フィードバック対応Webタイマー
+    </footer>
+
+    <script>
+        const CIRCUMFERENCE = 753.98; // 2 * pi * 120
+        const ring = document.getElementById('progress-ring');
+        const timeDisplay = document.getElementById('time-display');
+        const statusLabel = document.getElementById('status-label');
+        const startPauseBtn = document.getElementById('start-pause-btn');
+        const startIcon = document.getElementById('start-icon');
+        const startText = document.getElementById('start-text');
+        const bodyContainer = document.getElementById('body-container');
+        const notificationBox = document.getElementById('notification-box');
+
+        let totalSeconds = 300; // default 5 minutes
+        let remainingSeconds = 300;
+        let timerId = null;
+        let isRunning = false;
+        let isDarkMode = true;
+
+        // Initialize ring styling
+        ring.style.strokeDasharray = CIRCUMFERENCE;
+
+        function updateDisplay() {
+            const mins = Math.floor(remainingSeconds / 60);
+            const secs = remainingSeconds % 60;
+            timeDisplay.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+            
+            // Calculate progress offset
+            const progress = totalSeconds > 0 ? (remainingSeconds / totalSeconds) : 0;
+            const offset = CIRCUMFERENCE - (progress * CIRCUMFERENCE);
+            ring.style.strokeDashoffset = offset;
+        }
+
+        function setTimer(minutes) {
+            pauseTimer();
+            totalSeconds = minutes * 60;
+            remainingSeconds = totalSeconds;
+            clearNotification();
+            updateDisplay();
+            statusLabel.textContent = "Ready";
+        }
+
+        function toggleTimer() {
+            if (isRunning) {
+                pauseTimer();
+            } else {
+                startTimer();
+            }
+        }
+
+        function startTimer() {
+            if (remainingSeconds <= 0) {
+                remainingSeconds = totalSeconds;
+            }
+            if (totalSeconds <= 0) return;
+
+            isRunning = true;
+            startIcon.textContent = "⏸";
+            startText.textContent = "一時停止";
+            statusLabel.textContent = "Running";
+            clearNotification();
+            bodyContainer.classList.remove('timer-finished');
+
+            timerId = setInterval(() => {
+                if (remainingSeconds > 0) {
+                    remainingSeconds--;
+                    updateDisplay();
+                } else {
+                    clearInterval(timerId);
+                    isRunning = false;
+                    onTimerFinished();
+                }
+            }, 1000);
+        }
+
+        function pauseTimer() {
+            isRunning = false;
+            clearInterval(timerId);
+            startIcon.textContent = "▶";
+            startText.textContent = "スタート";
+            if (remainingSeconds > 0) {
+                statusLabel.textContent = "Paused";
+            }
+        }
+
+        function resetTimer() {
+            pauseTimer();
+            remainingSeconds = totalSeconds;
+            clearNotification();
+            updateDisplay();
+            statusLabel.textContent = "Ready";
+            bodyContainer.classList.remove('timer-finished');
+            ring.classList.remove('animate-silent-pulse', 'text-rose-500');
+            ring.classList.add('text-indigo-500');
+        }
+
+        function onTimerFinished() {
+            statusLabel.textContent = "Finished";
+            startIcon.textContent = "▶";
+            startText.textContent = "スタート";
+            
+            // Visual feedback only (No audio beep)
+            bodyContainer.classList.add('timer-finished');
+            ring.classList.remove('text-indigo-500');
+            ring.classList.add('text-rose-500', 'animate-silent-pulse');
+            
+            // Show custom silent notification box
+            notificationBox.classList.remove('hidden');
+        }
+
+        function clearNotification() {
+            notificationBox.classList.add('hidden');
+            bodyContainer.classList.remove('timer-finished');
+            ring.classList.remove('animate-silent-pulse', 'text-rose-500');
+            ring.classList.add('text-indigo-500');
+        }
+
+        function openCustomModal() {
+            document.getElementById('custom-modal').classList.remove('hidden');
+        }
+
+        function closeCustomModal() {
+            document.getElementById('custom-modal').classList.add('hidden');
+        }
+
+        function applyCustomTime() {
+            const val = parseInt(document.getElementById('custom-min').value);
+            if (!isNaN(val) && val > 0) {
+                setTimer(val);
+                closeCustomModal();
+            }
+        }
+
+        // Theme Toggle Support
+        const themeToggleBtn = document.getElementById('theme-toggle');
+        const themeIcon = document.getElementById('theme-icon');
+
+        themeToggleBtn.addEventListener('click', () => {
+            isDarkMode = !isDarkMode;
+            if (isDarkMode) {
+                bodyContainer.className = "bg-slate-950 text-slate-100 min-h-screen flex flex-col justify-between items-center p-4 sm:p-6 transition-colors duration-500";
+                themeIcon.textContent = "🌙";
+            } else {
+                bodyContainer.className = "bg-slate-100 text-slate-900 min-h-screen flex flex-col justify-between items-center p-4 sm:p-6 transition-colors duration-500";
+                themeIcon.textContent = "☀️";
+            }
+        });
+
+        // Initial setup
+        updateDisplay();
+    </script>
+</body>
+</html>
