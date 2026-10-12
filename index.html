@@ -3,470 +3,668 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>丸形無音WEBタイマー - 直感時刻設定</title>
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <title>無音円形タイマー</title>
     <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-color: #f8fafc;
+            --text-muted: #94a3b8;
+            --primary: #38bdf8;
+            --primary-glow: rgba(56, 189, 248, 0.3);
+            --accent: #f43f5e;
+            --border: #334155;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
         body {
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            user-select: none;
-            -webkit-user-select: none;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 16px;
+        }
+
+        .container {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 24px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            letter-spacing: 0.05em;
+        }
+
+        /* モード切り替えタブ */
+        .tabs {
+            display: flex;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 12px;
+            padding: 4px;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            flex: 1;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            padding: 10px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .tab.active {
+            background: var(--primary);
+            color: #0f172a;
+            font-weight: 600;
+            box-shadow: 0 2px 8px var(--primary-glow);
+        }
+
+        /* 設定パネル */
+        .panel {
+            width: 100%;
+            display: none;
+            flex-direction: column;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .panel.active {
+            display: flex;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            align-items: center;
+        }
+
+        select, input {
+            background: var(--bg-color);
+            border: 1px solid var(--border);
+            color: var(--text-color);
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        select:focus, input:focus {
+            border-color: var(--primary);
+        }
+
+        .select-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .preset-buttons {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+        }
+
+        .preset-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            color: var(--text-color);
+            padding: 8px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .preset-btn:hover {
+            background: rgba(56, 189, 248, 0.1);
+            border-color: var(--primary);
+        }
+
+        /* 円形タイマー表示 */
+        .timer-display-container {
+            position: relative;
+            width: 260px;
+            height: 260px;
+            margin: 10px 0 24px 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .progress-ring {
+            transform: rotate(-90deg);
+        }
+
+        .progress-ring__circle-bg {
+            stroke: var(--border);
+            fill: none;
+            stroke-width: 10;
+        }
+
+        .progress-ring__circle {
+            stroke: var(--primary);
+            fill: none;
+            stroke-width: 10;
+            stroke-linecap: round;
+            transition: stroke-dashoffset 0.5s linear;
+        }
+
+        .timer-text-group {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .time-left {
+            font-size: 2.75rem;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -0.03em;
+        }
+
+        .time-target-info {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        /* コントロールボタン */
+        .controls {
+            display: flex;
+            gap: 12px;
+            width: 100%;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 14px;
+            border-radius: 14px;
+            font-size: 1rem;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: transform 0.1s, opacity 0.2s;
+        }
+
+        .btn:active {
+            transform: scale(0.97);
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: #0f172a;
+            box-shadow: 0 4px 14px var(--primary-glow);
+        }
+
+        .btn-secondary {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: var(--text-color);
+        }
+
+        .btn-danger {
+            background-color: var(--accent);
+            color: white;
+        }
+
+        /* スリープ防止設定 */
+        .wake-lock-status {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            margin-top: 20px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border);
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 22px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: var(--border);
+            transition: .3s;
+            border-radius: 22px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--primary);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(18px);
+        }
+
+        /* 完了時のフラッシュアニメーション */
+        @keyframes pulse-border {
+            0% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.7); }
+            70% { box-shadow: 0 0 0 20px rgba(56, 189, 248, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0); }
+        }
+
+        .finished {
+            animation: pulse-border 1.5s infinite;
         }
         
-        /* Smooth circle transition */
-        .progress-ring__circle {
-            transition: stroke-dashoffset 0.35s ease-out;
-        }
-
-        /* Custom Scrollbar for dropdown options if rendered natively */
-        select option {
-            background-color: #0f172a;
-            color: #f8fafc;
-            padding: 10px;
-        }
-
-        /* Visual-only Alarm animation (pulsing background and ring glow) */
-        @keyframes silent-alert-pulse {
-            0%, 100% {
-                box-shadow: inset 0 0 50px rgba(244, 63, 94, 0.25);
-                border-color: rgba(244, 63, 94, 0.8);
-            }
-            50% {
-                box-shadow: inset 0 0 120px rgba(244, 63, 94, 0.55);
-                border-color: rgba(244, 63, 94, 1);
-            }
-        }
-
-        .alert-active {
-            animation: silent-alert-pulse 1.2s infinite ease-in-out;
-        }
-
-        @keyframes ring-glow {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.7; transform: scale(1.02); }
-        }
-
-        .ring-alert {
-            animation: ring-glow 1.5s infinite cubic-bezier(0.4, 0, 0.6, 1);
-        }
-
-        /* Hide standard number input arrows */
-        input[type="number"]::-webkit-inner-spin-button,
-        input[type="number"]::-webkit-outer-spin-button {
-            -webkit-appearance: none;
-            margin: 0;
+        .finished .progress-ring__circle {
+            stroke: var(--accent);
         }
     </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col justify-between items-center p-4 sm:p-6 transition-colors duration-500 relative overflow-x-hidden" id="main-body">
+<body>
 
-    <!-- Header Controls -->
-    <header class="w-full max-w-md flex justify-between items-center py-2 z-10">
-        <div class="flex items-center space-x-2.5">
-            <div class="w-3.5 h-3.5 rounded-full bg-emerald-400 animate-pulse shadow-lg shadow-emerald-500/50"></div>
-            <h1 class="text-lg font-bold tracking-tight text-slate-100">Silent Timer</h1>
-            <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-800/80 text-slate-400 border border-slate-700/50">完全無音</span>
+    <div class="container" id="mainContainer">
+        <h1>サイレントタイマー</h1>
+
+        <!-- モード切替 -->
+        <div class="tabs">
+            <button class="tab active" data-mode="duration">残り時間</button>
+            <button class="tab" data-mode="target">時刻指定</button>
         </div>
 
-        <!-- Mode Toggle Tabs -->
-        <div class="bg-slate-900/90 border border-slate-800 p-1 rounded-2xl flex text-xs font-semibold shadow-inner">
-            <button id="tab-duration" onclick="setMode('duration')" class="px-3.5 py-1.5 rounded-xl bg-indigo-600 text-white shadow-md transition-all duration-200">
-                経過時間
-            </button>
-            <button id="tab-target" onclick="setMode('target')" class="px-3.5 py-1.5 rounded-xl text-slate-400 hover:text-white transition-all duration-200">
-                目標時刻
-            </button>
-        </div>
-    </header>
-
-    <!-- Main Interactive Content Container -->
-    <main class="w-full max-w-md flex flex-col items-center my-auto space-y-5 z-10">
-
-        <!-- Completion / Alert Visual Banner -->
-        <div id="alarm-banner" class="hidden w-full bg-rose-500/20 border border-rose-500/60 text-rose-200 px-4 py-3 rounded-2xl text-center text-sm font-bold tracking-wide shadow-xl backdrop-blur-md animate-bounce">
-            ⏰ 時間になりました（無音通知中）
-        </div>
-
-        <!-- Mode 1: Duration Timer Presets (〇分間) -->
-        <div id="duration-controls" class="w-full grid grid-cols-4 gap-2">
-            <button onclick="setDurationTimer(3)" class="py-2.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-800/80 text-xs font-semibold text-slate-300 hover:text-white transition active:scale-95">3分</button>
-            <button onclick="setDurationTimer(5)" class="py-2.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-800/80 text-xs font-semibold text-slate-300 hover:text-white transition active:scale-95">5分</button>
-            <button onclick="setDurationTimer(10)" class="py-2.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-800/80 text-xs font-semibold text-slate-300 hover:text-white transition active:scale-95">10分</button>
-            <button onclick="setDurationTimer(15)" class="py-2.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-800/80 text-xs font-semibold text-slate-300 hover:text-white transition active:scale-95">15分</button>
-            <button onclick="setDurationTimer(25)" class="py-2.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-800/80 text-xs font-semibold text-slate-300 hover:text-white transition active:scale-95">25分</button>
-            <button onclick="setDurationTimer(30)" class="py-2.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-800/80 text-xs font-semibold text-slate-300 hover:text-white transition active:scale-95">30分</button>
-            <button onclick="setDurationTimer(45)" class="py-2.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-800/80 text-xs font-semibold text-slate-300 hover:text-white transition active:scale-95">45分</button>
-            <button onclick="setDurationTimer(60)" class="py-2.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-800/80 text-xs font-semibold text-slate-300 hover:text-white transition active:scale-95">60分</button>
-        </div>
-
-        <!-- Mode 2: Target Time Dropdown Selector Panel (何時までタイマー) -->
-        <div id="target-controls" class="hidden w-full bg-slate-900/80 border border-slate-800/90 p-4 rounded-3xl space-y-3.5 backdrop-blur-md shadow-xl">
-            <div class="flex justify-between items-center px-1">
-                <span class="text-xs font-bold text-slate-300 tracking-wider">目標時刻を設定</span>
-                <span id="day-indicator" class="text-[11px] font-semibold text-indigo-400 bg-indigo-950/80 border border-indigo-800/50 px-2.5 py-0.5 rounded-full">本日中に終了</span>
-            </div>
-
-            <!-- Stylized Large Pull-down (Select) Inputs for Hours and Minutes -->
-            <div class="grid grid-cols-2 gap-3">
-                <!-- Hour Select -->
-                <div class="relative group">
-                    <label class="block text-[10px] font-bold text-slate-400 mb-1 ml-1 uppercase">時 (Hour)</label>
-                    <div class="relative flex items-center">
-                        <select id="select-hour" onchange="onTargetSelectChange()" 
-                            class="w-full appearance-none bg-slate-950 border-2 border-slate-800 group-hover:border-indigo-500/70 focus:border-indigo-500 rounded-2xl px-4 py-3 text-2xl font-bold text-center text-white font-mono cursor-pointer transition focus:outline-none shadow-inner">
-                            <!-- Populated via JavaScript -->
-                        </select>
-                        <div class="absolute right-3.5 pointer-events-none text-slate-400">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path></svg>
-                        </div>
-                    </div>
+        <!-- ① 残り時間モードパネル -->
+        <div class="panel active" id="durationPanel">
+            <div class="input-group">
+                <div class="select-wrapper">
+                    <select id="durHours">
+                        <!-- JSで生成 -->
+                    </select>
+                    <span>時間</span>
                 </div>
-
-                <!-- Minute Select -->
-                <div class="relative group">
-                    <label class="block text-[10px] font-bold text-slate-400 mb-1 ml-1 uppercase">分 (Minute)</label>
-                    <div class="relative flex items-center">
-                        <select id="select-minute" onchange="onTargetSelectChange()" 
-                            class="w-full appearance-none bg-slate-950 border-2 border-slate-800 group-hover:border-indigo-500/70 focus:border-indigo-500 rounded-2xl px-4 py-3 text-2xl font-bold text-center text-white font-mono cursor-pointer transition focus:outline-none shadow-inner">
-                            <!-- Populated via JavaScript -->
-                        </select>
-                        <div class="absolute right-3.5 pointer-events-none text-slate-400">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path></svg>
-                        </div>
-                    </div>
+                <div class="select-wrapper">
+                    <select id="durMins">
+                        <!-- JSで生成 -->
+                    </select>
+                    <span>分</span>
                 </div>
             </div>
-
-            <!-- Quick Add Shortcuts (+10分, +15分, +30分, +1時間) -->
-            <div class="pt-1">
-                <span class="block text-[10px] font-semibold text-slate-400 mb-1.5 ml-1">現在時刻からクイック指定:</span>
-                <div class="grid grid-cols-4 gap-1.5">
-                    <button onclick="addQuickMinutes(10)" class="py-2 bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 rounded-xl text-xs font-bold text-indigo-300 transition active:scale-95">+10分</button>
-                    <button onclick="addQuickMinutes(15)" class="py-2 bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 rounded-xl text-xs font-bold text-indigo-300 transition active:scale-95">+15分</button>
-                    <button onclick="addQuickMinutes(30)" class="py-2 bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 rounded-xl text-xs font-bold text-indigo-300 transition active:scale-95">+30分</button>
-                    <button onclick="addQuickMinutes(60)" class="py-2 bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 rounded-xl text-xs font-bold text-indigo-300 transition active:scale-95">+1時間</button>
-                </div>
+            <div class="preset-buttons">
+                <button class="preset-btn" onclick="setDuration(1, 0)">+1分</button>
+                <button class="preset-btn" onclick="setDuration(5, 0)">+5分</button>
+                <button class="preset-btn" onclick="setDuration(10, 0)">+10分</button>
+                <button class="preset-btn" onclick="setDuration(30, 0)">+30分</button>
             </div>
         </div>
 
-        <!-- Central Circular SVG Progress Container -->
-        <div class="relative flex items-center justify-center p-2 my-2">
-            <!-- Background Glow ring -->
-            <div id="ring-glow-bg" class="absolute w-72 h-72 sm:w-80 sm:h-80 rounded-full bg-indigo-600/10 blur-2xl transition-all duration-500"></div>
+        <!-- ② 時刻指定モードパネル -->
+        <div class="panel" id="targetPanel">
+            <div class="input-group">
+                <div class="select-wrapper">
+                    <select id="targetHour">
+                        <!-- JSで生成 -->
+                    </select>
+                    <span>時</span>
+                </div>
+                <div class="select-wrapper">
+                    <select id="targetMinute">
+                        <!-- JSで生成 -->
+                    </select>
+                    <span>分まで</span>
+                </div>
+            </div>
+            <div class="preset-buttons">
+                <button class="preset-btn" onclick="addTargetMinutes(10)">+10分後</button>
+                <button class="preset-btn" onclick="addTargetMinutes(30)">+30分後</button>
+                <button class="preset-btn" onclick="addTargetMinutes(60)">+1時間後</button>
+                <button class="preset-btn" onclick="setNextHourMark()">次の00分</button>
+            </div>
+        </div>
 
-            <!-- SVG Ring -->
-            <svg class="w-72 h-72 sm:w-80 sm:h-80 transform -rotate-90 relative z-10" viewBox="0 0 280 280">
-                <!-- Outer Track -->
-                <circle cx="140" cy="140" r="118" stroke="currentColor" stroke-width="10" class="text-slate-900 fill-transparent" />
-                <!-- Progress Line -->
-                <circle id="progress-ring" cx="140" cy="140" r="118" stroke="currentColor" stroke-width="10" 
-                    class="text-indigo-500 fill-transparent progress-ring__circle"
-                    stroke-dasharray="741.4"
-                    stroke-dashoffset="0"
-                    stroke-linecap="round" />
+        <!-- 円形タイマー部分 -->
+        <div class="timer-display-container">
+            <svg class="progress-ring" width="260" height="260">
+                <circle class="progress-ring__circle-bg" cx="130" cy="130" r="115" />
+                <circle class="progress-ring__circle" id="progressRing" cx="130" cy="130" r="115" 
+                        stroke-dasharray="722.56" stroke-dashoffset="0" />
             </svg>
-
-            <!-- Center Display Content -->
-            <div class="absolute flex flex-col items-center justify-center text-center z-20">
-                <!-- Countdown Clock Display -->
-                <span id="time-display" class="text-5xl sm:text-6xl font-black tracking-tight font-mono text-white drop-shadow-lg">05:00</span>
-                
-                <!-- Status & Sub Info -->
-                <div class="flex flex-col items-center mt-2 space-y-0.5">
-                    <span id="status-label" class="text-xs uppercase font-bold tracking-widest text-slate-400">READY</span>
-                    <span id="target-subtext" class="text-xs font-mono font-semibold text-indigo-400 hidden">--:-- まで</span>
-                </div>
+            <div class="timer-text-group">
+                <div class="time-left" id="timeDisplay">00:00</div>
+                <div class="time-target-info" id="targetInfo">設定してください</div>
             </div>
         </div>
 
-        <!-- Primary Action Buttons -->
-        <div class="w-full flex space-x-3 pt-2">
-            <button id="btn-start" onclick="toggleTimer()" class="flex-1 py-4 rounded-2xl bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-bold text-base tracking-wide shadow-lg shadow-indigo-600/30 transition-all duration-200 active:scale-98 flex items-center justify-center space-x-2">
-                <span id="btn-start-icon" class="text-lg">▶</span>
-                <span id="btn-start-text">スタート</span>
-            </button>
-            <button onclick="resetTimer()" class="px-6 py-4 rounded-2xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 font-bold text-sm transition-all duration-200 active:scale-98 shadow-md">
-                リセット
-            </button>
+        <!-- 操作ボタン -->
+        <div class="controls" id="controlButtons">
+            <button class="btn btn-primary" id="startBtn" onclick="startTimer()">スタート</button>
+            <button class="btn btn-secondary" id="resetBtn" onclick="resetTimer()">リセット</button>
         </div>
 
-    </main>
-
-    <!-- Footer -->
-    <footer class="w-full max-w-md text-center text-[11px] font-medium text-slate-500 py-2 z-10">
-        Silent Web Timer &bull; 完全無音 / アラート音なし
-    </footer>
+        <!-- スリープ防止設定 -->
+        <div class="wake-lock-status">
+            <span>画面スリープ防止</span>
+            <label class="toggle-switch">
+                <input type="checkbox" id="wakeLockToggle" checked>
+                <span class="slider"></span>
+            </label>
+        </div>
+    </div>
 
     <script>
-        // SVG Ring Circumference: 2 * Math.PI * 118 ≈ 741.42
-        const CIRCUMFERENCE = 741.42;
-        const ring = document.getElementById('progress-ring');
-        const ringGlow = document.getElementById('ring-glow-bg');
-        const timeDisplay = document.getElementById('time-display');
-        const statusLabel = document.getElementById('status-label');
-        const targetSubtext = document.getElementById('target-subtext');
-        const dayIndicator = document.getElementById('day-indicator');
-        const alarmBanner = document.getElementById('alarm-banner');
-        const mainBody = document.getElementById('main-body');
+        // --- プルダウンの初期化 ---
+        const durHoursSelect = document.getElementById('durHours');
+        const durMinsSelect = document.getElementById('durMins');
+        const targetHourSelect = document.getElementById('targetHour');
+        const targetMinuteSelect = document.getElementById('targetMinute');
 
-        const btnStart = document.getElementById('btn-start');
-        const btnStartIcon = document.getElementById('btn-start-icon');
-        const btnStartText = document.getElementById('btn-start-text');
+        for (let i = 0; i <= 24; i++) {
+            durHoursSelect.add(new Option(String(i).padStart(2, '0'), i));
+        }
+        for (let i = 0; i < 60; i++) {
+            durMinsSelect.add(new Option(String(i).padStart(2, '0'), i));
+        }
+        durMinsSelect.value = "5"; // デフォルト5分
 
-        const selectHour = document.getElementById('select-hour');
-        const selectMinute = document.getElementById('select-minute');
+        for (let i = 0; i < 24; i++) {
+            targetHourSelect.add(new Option(String(i).padStart(2, '0'), i));
+        }
+        for (let i = 0; i < 60; i += 5) { // 5分刻み
+            targetMinuteSelect.add(new Option(String(i).padStart(2, '0'), i));
+        }
 
+        // 現在時刻を目標時刻のデフォルトに設定
+        const nowInit = new Date();
+        targetHourSelect.value = nowInit.getHours();
+        let roundedMin = Math.ceil(nowInit.getMinutes() / 5) * 5;
+        if (roundedMin >= 60) {
+            roundedMin = 0;
+            targetHourSelect.value = (Number(targetHourSelect.value) + 1) % 24;
+        }
+        targetMinuteSelect.value = roundedMin;
+
+        // --- タブ切り替え ---
         let currentMode = 'duration'; // 'duration' or 'target'
-        let totalSeconds = 300;       // Initial 5 min
+        const tabs = document.querySelectorAll('.tab');
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                if (isRunning) return; // 実行中は切替不可
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                currentMode = tab.dataset.mode;
+                
+                document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+                if (currentMode === 'duration') {
+                    document.getElementById('durationPanel').classList.add('active');
+                } else {
+                    document.getElementById('targetPanel').classList.add('active');
+                }
+                updateInitialDisplay();
+            });
+        });
+
+        // --- タイマーロジック変数 ---
+        let totalSeconds = 300; // デフォルト5分
         let remainingSeconds = 300;
-        let targetDate = null;
         let timerInterval = null;
         let isRunning = false;
+        let targetEndTime = null;
 
-        // Initialize SVG Ring
-        ring.style.strokeDasharray = CIRCUMFERENCE;
-        ring.style.strokeDashoffset = 0;
+        const timeDisplay = document.getElementById('timeDisplay');
+        const targetInfo = document.getElementById('targetInfo');
+        const progressRing = document.getElementById('progressRing');
+        const circumference = 2 * Math.PI * 115; // r = 115
+        progressRing.style.strokeDasharray = circumference;
 
-        // Populate Dropdowns for Hours (00-23) and Minutes (00-59)
-        function initDropdowns() {
-            selectHour.innerHTML = '';
-            selectMinute.innerHTML = '';
-
-            for (let h = 0; h < 24; h++) {
-                const opt = document.createElement('option');
-                opt.value = h;
-                opt.textContent = String(h).padStart(2, '0') + ' 時';
-                selectHour.appendChild(opt);
-            }
-
-            for (let m = 0; m < 60; m++) {
-                const opt = document.createElement('option');
-                opt.value = m;
-                opt.textContent = String(m).padStart(2, '0') + ' 分';
-                selectMinute.appendChild(opt);
-            }
+        function setProgress(percent) {
+            const offset = circumference - (percent / 100) * circumference;
+            progressRing.style.strokeDashoffset = offset;
         }
 
-        // Set mode tab: 'duration' or 'target'
-        function setMode(mode) {
-            pauseTimer();
-            clearAlarm();
-            currentMode = mode;
-
-            const tabDuration = document.getElementById('tab-duration');
-            const tabTarget = document.getElementById('tab-target');
-            const durationControls = document.getElementById('duration-controls');
-            const targetControls = document.getElementById('target-controls');
-
-            if (mode === 'duration') {
-                tabDuration.className = "px-3.5 py-1.5 rounded-xl bg-indigo-600 text-white shadow-md transition-all duration-200";
-                tabTarget.className = "px-3.5 py-1.5 rounded-xl text-slate-400 hover:text-white transition-all duration-200";
-                durationControls.classList.remove('hidden');
-                targetControls.classList.add('hidden');
-                targetSubtext.classList.add('hidden');
-                setDurationTimer(5);
-            } else {
-                tabTarget.className = "px-3.5 py-1.5 rounded-xl bg-indigo-600 text-white shadow-md transition-all duration-200";
-                tabDuration.className = "px-3.5 py-1.5 rounded-xl text-slate-400 hover:text-white transition-all duration-200";
-                durationControls.classList.add('hidden');
-                targetControls.classList.remove('hidden');
-                targetSubtext.classList.remove('hidden');
-                
-                // Set default dropdown to +15 minutes from now
-                addQuickMinutes(15);
+        function formatTime(secs) {
+            const h = Math.floor(secs / 3600);
+            const m = Math.floor((secs % 3600) / 60);
+            const s = secs % 60;
+            if (h > 0) {
+                return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
             }
+            return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
         }
 
-        // Duration Mode: Set timer by minutes preset
-        function setDurationTimer(mins) {
-            pauseTimer();
-            clearAlarm();
-            totalSeconds = mins * 60;
+        function updateInitialDisplay() {
+            if (isRunning) return;
+            calculateSeconds();
             remainingSeconds = totalSeconds;
-            statusLabel.textContent = "READY";
-            updateDisplay();
+            timeDisplay.textContent = formatTime(remainingSeconds);
+            setProgress(100);
+
+            if (currentMode === 'target' && targetEndTime) {
+                const h = String(targetEndTime.getHours()).padStart(2, '0');
+                const m = String(targetEndTime.getMinutes()).padStart(2, '0');
+                targetInfo.textContent = `${h}:${m} まで`;
+            } else if (currentMode === 'duration') {
+                targetInfo.textContent = '残り時間タイマー';
+            }
         }
 
-        // Target Mode: Triggered when user changes hour/minute dropdown
-        function onTargetSelectChange() {
-            pauseTimer();
-            clearAlarm();
+        function calculateSeconds() {
+            if (currentMode === 'duration') {
+                const h = parseInt(durHoursSelect.value) || 0;
+                const m = parseInt(durMinsSelect.value) || 0;
+                totalSeconds = h * 3600 + m * 60;
+                if (totalSeconds <= 0) totalSeconds = 60; // 最低1分
+            } else {
+                const now = new Date();
+                const target = new Date();
+                target.setHours(parseInt(targetHourSelect.value));
+                target.setMinutes(parseInt(targetMinuteSelect.value));
+                target.setSeconds(0);
+                
+                if (target <= now) {
+                    // 翌日に設定
+                    target.setDate(target.getDate() + 1);
+                }
+                targetEndTime = target;
+                totalSeconds = Math.floor((target - now) / 1000);
+            }
+        }
 
-            const selectedHour = parseInt(selectHour.value);
-            const selectedMin = parseInt(selectMinute.value);
+        // プリセット用ヘルパー
+        window.setDuration = function(m, h = 0) {
+            if (isRunning) return;
+            durHoursSelect.value = h;
+            durMinsSelect.value = m;
+            updateInitialDisplay();
+        };
 
+        window.addTargetMinutes = function(mins) {
+            if (isRunning) return;
             const now = new Date();
-            let target = new Date();
-            target.setHours(selectedHour, selectedMin, 0, 0);
-
-            // If selected time is earlier than or equal to current time, set for tomorrow
-            if (target <= now) {
-                target.setDate(target.getDate() + 1);
-                dayIndicator.textContent = "翌日に終了";
-                dayIndicator.className = "text-[11px] font-semibold text-amber-400 bg-amber-950/80 border border-amber-800/50 px-2.5 py-0.5 rounded-full";
-            } else {
-                dayIndicator.textContent = "本日中に終了";
-                dayIndicator.className = "text-[11px] font-semibold text-indigo-400 bg-indigo-950/80 border border-indigo-800/50 px-2.5 py-0.5 rounded-full";
+            now.setMinutes(now.getMinutes() + mins);
+            targetHourSelect.value = now.getHours();
+            // 最寄りの5分刻みに丸める
+            let m = Math.round(now.getMinutes() / 5) * 5;
+            if (m >= 60) {
+                m = 0;
+                targetHourSelect.value = (Number(targetHourSelect.value) + 1) % 24;
             }
+            targetMinuteSelect.value = m;
+            updateInitialDisplay();
+        };
 
-            targetDate = target;
-            const diffSeconds = Math.max(0, Math.floor((targetDate - now) / 1000));
-            
-            totalSeconds = diffSeconds;
-            remainingSeconds = diffSeconds;
-
-            const hStr = String(selectedHour).padStart(2, '0');
-            const mStr = String(selectedMin).padStart(2, '0');
-            targetSubtext.textContent = `${hStr}:${mStr} まで`;
-            statusLabel.textContent = "READY";
-
-            updateDisplay();
-        }
-
-        // Target Mode: Quick Add Buttons (+10分, +15分, +30分, +1時間)
-        function addQuickMinutes(mins) {
+        window.setNextHourMark = function() {
+            if (isRunning) return;
             const now = new Date();
-            let baseTime = (targetDate && targetDate > now) ? new Date(targetDate) : new Date();
-            
-            // Add specified minutes
-            baseTime.setMinutes(baseTime.getMinutes() + mins);
+            let h = (now.getHours() + 1) % 24;
+            targetHourSelect.value = h;
+            targetMinuteSelect.value = 0;
+            updateInitialDisplay();
+        };
 
-            // Synchronize dropdown values
-            selectHour.value = baseTime.getHours();
-            selectMinute.value = baseTime.getMinutes();
+        // 入力変更時のイベントリスナー
+        [durHoursSelect, durMinsSelect, targetHourSelect, targetMinuteSelect].forEach(el => {
+            el.addEventListener('change', updateInitialDisplay);
+        });
 
-            onTargetSelectChange();
-        }
+        // --- Wake Lock (画面スリープ防止) API ---
+        let wakeLock = null;
+        const wakeLockToggle = document.getElementById('wakeLockToggle');
 
-        // Update Circular Visual Progress & Time Text
-        function updateDisplay() {
-            // Display Format (HH:MM:SS if over 1 hour, otherwise MM:SS)
-            const hrs = Math.floor(remainingSeconds / 3600);
-            const mins = Math.floor((remainingSeconds % 3600) / 60);
-            const secs = remainingSeconds % 60;
-
-            if (hrs > 0) {
-                timeDisplay.textContent = `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-                timeDisplay.classList.replace('text-5xl', 'text-4xl');
-                timeDisplay.classList.replace('sm:text-6xl', 'sm:text-5xl');
-            } else {
-                timeDisplay.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-                timeDisplay.classList.replace('text-4xl', 'text-5xl');
-                timeDisplay.classList.replace('sm:text-5xl', 'sm:text-6xl');
-            }
-
-            // Calculate SVG Offset
-            const progress = totalSeconds > 0 ? (remainingSeconds / totalSeconds) : 0;
-            const offset = CIRCUMFERENCE - (progress * CIRCUMFERENCE);
-            ring.style.strokeDashoffset = offset;
-        }
-
-        // Start / Pause Controls
-        function toggleTimer() {
-            if (isRunning) {
-                pauseTimer();
-            } else {
-                startTimer();
+        async function requestWakeLock() {
+            if (!wakeLockToggle.checked) return;
+            try {
+                if ('wakeLock' in navigator) {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                }
+            } catch (err) {
+                console.error(`Wake Lock error: ${err.name}, ${err.message}`);
             }
         }
 
-        function startTimer() {
-            if (remainingSeconds <= 0) {
-                if (currentMode === 'target') {
-                    onTargetSelectChange();
-                } else {
-                    remainingSeconds = totalSeconds;
+        async function releaseWakeLock() {
+            if (wakeLock !== null) {
+                try {
+                    await wakeLock.release();
+                    wakeLock = null;
+                } catch (err) {
+                    console.error(`Wake Lock release error: ${err.name}, ${err.message}`);
                 }
             }
+        }
 
+        document.addEventListener('visibilitychange', async () => {
+            if (wakeLock !== null && document.visibilityState === 'visible' && isRunning) {
+                await requestWakeLock();
+            }
+        });
+
+        // --- タイマー制御 ---
+        window.startTimer = async function() {
+            if (isRunning) return;
+            calculateSeconds();
             if (totalSeconds <= 0) return;
 
-            clearAlarm();
+            remainingSeconds = totalSeconds;
             isRunning = true;
 
-            btnStart.classList.replace('bg-indigo-600', 'bg-amber-600');
-            btnStart.classList.replace('hover:bg-indigo-500', 'hover:bg-amber-500');
-            btnStartIcon.textContent = "⏸";
-            btnStartText.textContent = "一時停止";
-            statusLabel.textContent = "RUNNING";
+            // UI切替
+            document.getElementById('mainContainer').classList.remove('finished');
+            document.querySelectorAll('select, .tab, .preset-btn').forEach(el => el.disabled = true);
+            const startBtn = document.getElementById('startBtn');
+            startBtn.textContent = '一時停止';
+            startBtn.className = 'btn btn-secondary';
+            startBtn.onclick = pauseTimer;
+
+            await requestWakeLock();
+
+            const startTime = Date.now();
+            const initialRemaining = remainingSeconds;
 
             timerInterval = setInterval(() => {
-                if (currentMode === 'target' && targetDate) {
-                    const now = new Date();
-                    remainingSeconds = Math.max(0, Math.floor((targetDate - now) / 1000));
-                } else {
-                    if (remainingSeconds > 0) {
-                        remainingSeconds--;
-                    }
-                }
-
-                updateDisplay();
+                const elapsed = Math.floor((Date.now() - startTime) / 1000);
+                remainingSeconds = initialRemaining - elapsed;
 
                 if (remainingSeconds <= 0) {
-                    clearInterval(timerInterval);
-                    isRunning = false;
-                    triggerAlarm();
+                    remainingSeconds = 0;
+                    finishTimer();
                 }
-            }, 1000);
-        }
 
-        function pauseTimer() {
-            isRunning = false;
-            clearInterval(timerInterval);
-
-            btnStart.classList.replace('bg-amber-600', 'bg-indigo-600');
-            btnStart.classList.replace('hover:bg-amber-500', 'hover:bg-indigo-500');
-            btnStartIcon.textContent = "▶";
-            btnStartText.textContent = "スタート";
-
-            if (remainingSeconds > 0) {
-                statusLabel.textContent = "PAUSED";
-            }
-        }
-
-        function resetTimer() {
-            pauseTimer();
-            clearAlarm();
-
-            if (currentMode === 'target') {
-                onTargetSelectChange();
-            } else {
-                remainingSeconds = totalSeconds;
-            }
-
-            statusLabel.textContent = "READY";
-            updateDisplay();
-        }
-
-        // Visual Silent Alarm Trigger
-        function triggerAlarm() {
-            statusLabel.textContent = "FINISHED";
-            btnStartIcon.textContent = "▶";
-            btnStartText.textContent = "スタート";
-
-            alarmBanner.classList.remove('hidden');
-            mainBody.classList.add('alert-active');
-            
-            ring.classList.remove('text-indigo-500');
-            ring.classList.add('text-rose-500', 'ring-alert');
-            ringGlow.classList.replace('bg-indigo-600/10', 'bg-rose-600/30');
-        }
-
-        function clearAlarm() {
-            alarmBanner.classList.add('hidden');
-            mainBody.classList.remove('alert-active');
-
-            ring.classList.remove('text-rose-500', 'ring-alert');
-            ring.classList.add('text-indigo-500');
-            ringGlow.classList.replace('bg-rose-600/30', 'bg-indigo-600/10');
-        }
-
-        // Initialize on load
-        window.onload = function() {
-            initDropdowns();
-            setMode('duration');
+                timeDisplay.textContent = formatTime(remainingSeconds);
+                const percent = (remainingSeconds / totalSeconds) * 100;
+                setProgress(percent);
+            }, 200);
         };
+
+        window.pauseTimer = function() {
+            if (!isRunning) return;
+            clearInterval(timerInterval);
+            isRunning = false;
+
+            const startBtn = document.getElementById('startBtn');
+            startBtn.textContent = '再開';
+            startBtn.className = 'btn btn-primary';
+            startBtn.onclick = startTimer;
+
+            releaseWakeLock();
+        };
+
+        function finishTimer() {
+            clearInterval(timerInterval);
+            isRunning = false;
+            remainingSeconds = 0;
+            timeDisplay.textContent = "00:00";
+            setProgress(0);
+
+            document.getElementById('mainContainer').classList.add('finished');
+            targetInfo.textContent = "時間になりました";
+
+            const startBtn = document.getElementById('startBtn');
+            startBtn.textContent = 'スタート';
+            startBtn.className = 'btn btn-primary';
+            startBtn.onclick = startTimer;
+
+            releaseWakeLock();
+        }
+
+        window.resetTimer = function() {
+            clearInterval(timerInterval);
+            isRunning = false;
+            document.getElementById('mainContainer').classList.remove('finished');
+            
+            document.querySelectorAll('select, .tab, .preset-btn').forEach(el => el.disabled = false);
+            const startBtn = document.getElementById('startBtn');
+            startBtn.textContent = 'スタート';
+            startBtn.className = 'btn btn-primary';
+            startBtn.onclick = startTimer;
+
+            releaseWakeLock();
+            updateInitialDisplay();
+        };
+
+        // 初期表示のセット
+        updateInitialDisplay();
     </script>
 </body>
 </html>
